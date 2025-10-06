@@ -54,12 +54,13 @@ document.getElementById("saveBtn").addEventListener("click", async () => {
   const filename = `${participantId}_video1.json`;
 
   try {
-    const res = await fetch("/.netlify/functions/upload", {
+    // 🔸 Netlify Functions にPOST送信
+    const res = await fetch("/.netlify/functions/upload-drawing", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         filename,
-        jsonData: JSON.stringify(points) // JSON文字列化して送信
+        points // JSON形式のまま送る
       })
     });
 
@@ -69,9 +70,10 @@ document.getElementById("saveBtn").addEventListener("click", async () => {
     } else {
       const errorText = await res.text();
       status.textContent = "保存に失敗しました: " + errorText;
+      console.error("保存エラー:", errorText);
     }
   } catch (e) {
-    console.error(e);
+    console.error("通信エラー:", e);
     status.textContent = "保存中にエラーが発生しました";
   }
 });
