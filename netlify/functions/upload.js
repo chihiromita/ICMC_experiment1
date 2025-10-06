@@ -1,36 +1,59 @@
-import fetch from "node-fetch";
+// CommonJS形式
+const fetch = require("node-fetch");
 
-export const handler = async (event) => {
+exports.handler = async function(event, context) {
+  if (event.httpMethod !== "POST") {
+    return {
+      statusCode: 405,
+      body: "Method Not Allowed",
+    };
+  }
+
   try {
-    const DROPBOX_TOKEN = process.env.DROPBOX_TOKEN;
     const body = JSON.parse(event.body);
-    const { filename, jsonData } = body;
+    const { filename, points } = body;
 
-    // Dropboxへアップロード
-    const response = await fetch("https://content.dropboxapi.com/2/files/upload", {
+    // Dropbox API
+    const DROPBOX_TOKEN = process.env.DROPBOX_TOKEN;
+    if (!DROPBOX_TOKEN) {
+      throw new Error("DROPBOX_TOKEN is not set");
+    }
+
+    const url = "https://content.dropboxapi.com/2/files/upload";
+    const res = await fetch(url, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${DROPBOX_TOKEN}`,
         "Dropbox-API-Arg": JSON.stringify({
-          path: `/${filename}`,
+          path: `/drawings/${filename}`,
           mode: "add",
           autorename: true,
-          mute: false
+          mute: false,
+          strict_conflict: false
         }),
         "Content-Type": "application/octet-stream"
       },
-      body: Buffer.from(jsonData)
+      body: JSON.stringify(points) // JSON文字列を送信
     });
 
-    const result = await response.json();
+    if (!res.ok) {
+      const text = await res.text();
+      return {
+        statusCode: 500,
+        body: `Dropbox upload failed: ${text}`
+      };
+    }
+
     return {
       statusCode: 200,
-      body: JSON.stringify({ message: "アップロード成功", result })
+      body: JSON.stringify({ message: "Saved successfully!" })
     };
-  } catch (error) {
+
+  } catch (err) {
+    console.error(err);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: error.message })
+      body: JSON.stringify({ error: err.message })
     };
   }
 };
