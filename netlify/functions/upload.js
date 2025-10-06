@@ -1,59 +1,40 @@
-// CommonJS形式
-const fetch = require("node-fetch");
+// upload-drawing.js
+const fetch = require("node-fetch"); // node-fetch v2 を使う場合
+const { Dropbox } = require("dropbox");
 
-exports.handler = async function(event, context) {
+// 環境変数を参照
+const APP_KEY = process.env.DROPBOX_APP_KEY;
+const APP_SECRET = process.env.DROPBOX_APP_SECRET;
+const REFRESH_TOKEN = process.env.DROPBOX_REFRESH_TOKEN;
+
+exports.handler = async function(event) {
   if (event.httpMethod !== "POST") {
-    return {
-      statusCode: 405,
-      body: "Method Not Allowed",
-    };
+    return { statusCode: 405, body: "Method Not Allowed" };
   }
 
   try {
-    const body = JSON.parse(event.body);
-    const { filename, points } = body;
+    const { filename, points } = JSON.parse(event.body);
 
-    // Dropbox API
-    const DROPBOX_TOKEN = process.env.DROPBOX_TOKEN;
-    if (!DROPBOX_TOKEN) {
-      throw new Error("DROPBOX_TOKEN is not set");
-    }
-
-    const url = "https://content.dropboxapi.com/2/files/upload";
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${DROPBOX_TOKEN}`,
-        "Dropbox-API-Arg": JSON.stringify({
-          path: `/drawings/${filename}`,
-          mode: "add",
-          autorename: true,
-          mute: false,
-          strict_conflict: false
-        }),
-        "Content-Type": "application/octet-stream"
-      },
-      body: JSON.stringify(points) // JSON文字列を送信
+    // Dropboxクライアント作成（リフレッシュトークンでアクセストークン自動取得）
+    const dbx = new Dropbox({
+      clientId: APP_KEY,
+      clientSecret: APP_SECRET,
+      refreshToken: REFRESH_TOKEN,
+      fetch
     });
 
-    if (!res.ok) {
-      const text = await res.text();
-      return {
-        statusCode: 500,
-        body: `Dropbox upload failed: ${text}`
-      };
-    }
+    // points配列を JSON 文字列に変換してアップロード
+    const content = JSON.stringify(points);
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ message: "Saved successfully!" })
-    };
+    await dbx.filesUpload({
+      path: `/ICMCexperiment1/${filename}`,
+      contents: content,
+      mode: "overwrite"
+    });
 
-  } catch (err) {
-    console.error(err);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: err.message })
-    };
+    return { statusCode: 200, body: "Upload successful" };
+  } catch (error) {
+    console.error("Dropbox upload failed:", error);
+    return { statusCode: 500, body: JSON.stringify(error) };
   }
 };

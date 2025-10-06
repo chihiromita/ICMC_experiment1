@@ -55,7 +55,7 @@ document.getElementById("saveBtn").addEventListener("click", async () => {
 
   try {
     // 🔸 Netlify Functions にPOST送信
-    const res = await fetch("/.netlify/functions/upload-drawing", {
+    const res = await fetch("/.netlify/functions/upload", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
