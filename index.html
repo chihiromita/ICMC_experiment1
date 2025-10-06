@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>実験への参加について</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>実験の説明</h1>
+    <p>
+      この実験では、映像を視聴し、感じた「楽器の位置」を画面上にマークしていただきます。<br>
+      所要時間は約5分です。データは匿名で保存され、研究目的のみに使用されます。
+    </p>
+    <button id="agreeBtn">同意して開始</button>
+  </div>
+
+  <script>
+    document.getElementById("agreeBtn").addEventListener("click", () => {
+      window.location.href = "experiment.html";
+    });
+  </script>
+</body>
+</html>

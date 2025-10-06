@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>実験ページ</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h2>映像を見て、楽器の位置をマークしてください</h2>
+
+    <!-- 動画 -->
+    <video id="stimulus" width="640" controls>
+      <source src="stimulus.mp4" type="video/mp4">
+      ブラウザがvideoタグをサポートしていません。
+    </video>
+
+    <!-- 描画用Canvas -->
+    <div>
+      <canvas id="drawCanvas" width="640" height="360"></canvas>
+    </div>
+
+    <button id="saveBtn">描画を保存する</button>
+    <p id="status"></p>
+  </div>
+
+  <!-- Firebase SDKの読み込み -->
+  <script type="module">
+    // Firebase App（必須）
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+    // Firebase Auth（匿名ログイン用）
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
+    // Firebase Storage（画像保存用）
+    import { getStorage, ref, uploadString } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-storage.js";
+
+    // Firebase 設定（自分のプロジェクト情報に置き換える）
+    const firebaseConfig = {
+      apiKey: "AIzaSyAjriQxARDTTqfjl5f1UjJ2PiTyG43vbcQ",
+      authDomain: "icmcexperiment1.firebaseapp.com",
+      projectId: "icmcexperiment1",
+      storageBucket: "icmcexperiment1.appspot.com",
+      messagingSenderId: "232795895941",
+      appId: "1:232795895941:web:d1dbd765303a5b67e7d1ec"
+    };
+
+    // Firebase 初期化
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const storage = getStorage(app);
+
+    // 匿名ログイン（参加者IDを作る）
+    let participantId = "";
+    signInAnonymously(auth)
+      .then((userCredential) => {
+        participantId = userCredential.user.uid;
+        console.log("匿名ログイン成功:", participantId);
+      })
+      .catch((error) => {
+        console.error("ログインエラー:", error);
+      });
+
+    // Canvas描画をFirebase Storageに保存
+    const canvas = document.getElementById("drawCanvas");
+    const saveBtn = document.getElementById("saveBtn");
+    const status = document.getElementById("status");
+
+    saveBtn.addEventListener("click", () => {
+      if (!participantId) {
+        status.textContent = "まだログイン中です。少し待ってください。";
+        return;
+      }
+
+      // CanvasをPNG形式のBase64に変換
+      const dataURL = canvas.toDataURL("image/png");
+      const storageRef = ref(storage, `drawings/${participantId}.png`);
+
+      uploadString(storageRef, dataURL, 'data_url')
+        .then(() => {
+          status.textContent = "保存しました！";
+        })
+        .catch((error) => {
+          console.error("保存エラー:", error);
+          status.textContent = "保存に失敗しました";
+        });
+    });
+  </script>
+</body>
+</html>
