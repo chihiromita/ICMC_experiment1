@@ -16,87 +16,14 @@
     </video>
 
     <!-- 描画用Canvas -->
-    <canvas id="drawCanvas" width="640" height="360"></canvas>
+    <div>
+      <canvas id="drawCanvas" width="640" height="360"></canvas>
+    </div>
 
     <button id="saveBtn">描画を保存する</button>
     <p id="status"></p>
   </div>
 
-  <!-- Firebase SDK -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
-    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
-    import { getStorage, ref, uploadBytes } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-storage.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyAjriQxARDTTqfjl5f1UjJ2PiTyG43vbcQ",
-      authDomain: "icmcexperiment1.firebaseapp.com",
-      projectId: "icmcexperiment1",
-      storageBucket: "icmcexperiment1.appspot.com",
-      messagingSenderId: "232795895941",
-      appId: "1:232795895941:web:d1dbd765303a5b67e7d1ec"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const storage = getStorage(app);
-
-    let participantId = "";
-    signInAnonymously(auth)
-      .then(userCredential => {
-        participantId = userCredential.user.uid;
-        console.log("匿名ログイン成功:", participantId);
-      })
-      .catch(error => {
-        console.error("ログインエラー:", error);
-      });
-
-    // Canvas描画設定
-    const canvas = document.getElementById("drawCanvas");
-    const ctx = canvas.getContext("2d");
-    const img = new Image();
-    img.src = "stage.png";
-    img.onload = () => ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-    let drawing = false;
-    const coordinates = []; // 座標保存用
-
-    canvas.addEventListener("mousedown", e => { drawing = true; addPoint(e); });
-    canvas.addEventListener("mouseup", () => drawing = false);
-    canvas.addEventListener("mousemove", e => { if (drawing) addPoint(e); });
-
-    function addPoint(e) {
-      const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      coordinates.push({x, y});
-      ctx.fillStyle = "rgba(255,0,0,0.7)";
-      ctx.beginPath();
-      ctx.arc(x, y, 5, 0, Math.PI*2);
-      ctx.fill();
-    }
-
-    // 保存ボタン
-    const saveBtn = document.getElementById("saveBtn");
-    const status = document.getElementById("status");
-
-    saveBtn.addEventListener("click", async () => {
-      if (!participantId) {
-        status.textContent = "まだログイン中です。少し待ってください。";
-        return;
-      }
-      status.textContent = "保存中…";
-
-      try {
-        const storageRef = ref(storage, `drawings/${participantId}.json`);
-        const blob = new Blob([JSON.stringify(coordinates)], {type: "application/json"});
-        await uploadBytes(storageRef, blob);
-        status.textContent = "座標を保存しました！";
-      } catch (error) {
-        console.error("保存エラー:", error);
-        status.textContent = "保存に失敗しました";
-      }
-    });
-  </script>
+  <script type="module" src="script.js"></script>
 </body>
 </html>
