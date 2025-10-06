@@ -3,11 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>実験ページ</title>
-  <style>
-    .container { max-width: 700px; margin: 20px auto; text-align: center; }
-    canvas { border: 1px solid #000; cursor: crosshair; display: block; margin: 0 auto; }
-    video { margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto; }
-  </style>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="container">
@@ -20,19 +16,20 @@
     </video>
 
     <!-- 描画用Canvas -->
-    <canvas id="drawCanvas" width="640" height="360"></canvas>
+    <div>
+      <canvas id="drawCanvas" width="640" height="360"></canvas>
+    </div>
 
     <button id="saveBtn">描画を保存する</button>
     <p id="status"></p>
   </div>
 
-  <!-- Firebase SDK -->
+  <!-- Firebase SDKの読み込み -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
     import { getStorage, ref, uploadString } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-storage.js";
 
-    // Firebase 設定
     const firebaseConfig = {
       apiKey: "AIzaSyAjriQxARDTTqfjl5f1UjJ2PiTyG43vbcQ",
       authDomain: "icmcexperiment1.firebaseapp.com",
@@ -46,7 +43,6 @@
     const auth = getAuth(app);
     const storage = getStorage(app);
 
-    // 匿名ログイン
     let participantId = "";
     signInAnonymously(auth)
       .then((userCredential) => {
@@ -55,44 +51,35 @@
       })
       .catch((error) => console.error("ログインエラー:", error));
 
-    // Canvasと背景画像
+    // Canvas準備
     const canvas = document.getElementById("drawCanvas");
     const ctx = canvas.getContext("2d");
 
+    // 背景画像
     const img = new Image();
-    img.src = "stage.png"; // HTMLと同じ階層に配置
-    img.onload = () => {
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      enableDrawing(); // 画像読み込み後に描画機能を有効化
-    };
-    img.onerror = () => console.error("背景画像の読み込みに失敗しました");
+    img.src = "stage.png";
+    img.onload = () => ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-    // 描画機能
-    function enableDrawing() {
-      let drawing = false;
+    // 描画座標保存用
+    const points = [];
+    let drawing = false;
 
-      canvas.addEventListener("mousedown", e => { drawing = true; draw(e); });
-      canvas.addEventListener("mouseup", () => drawing = false);
-      canvas.addEventListener("mousemove", e => { if(drawing) draw(e); });
+    canvas.addEventListener("mousedown", e => { drawing = true; addPoint(e); });
+    canvas.addEventListener("mouseup", () => drawing = false);
+    canvas.addEventListener("mousemove", e => { if(drawing) addPoint(e); });
 
-      // タッチ対応
-      canvas.addEventListener("touchstart", e => { e.preventDefault(); drawing = true; draw(e.touches[0]); });
-      canvas.addEventListener("touchmove", e => { e.preventDefault(); if(drawing) draw(e.touches[0]); });
-      canvas.addEventListener("touchend", e => { e.preventDefault(); drawing = false; });
-    }
-
-    function draw(e) {
+    function addPoint(e){
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
-
+      points.push({x, y});
       ctx.fillStyle = "rgba(255,0,0,0.7)";
       ctx.beginPath();
-      ctx.arc(x, y, 5, 0, Math.PI * 2);
+      ctx.arc(x, y, 5, 0, Math.PI*2);
       ctx.fill();
     }
 
-    // 保存
+    // 保存ボタン
     const saveBtn = document.getElementById("saveBtn");
     const status = document.getElementById("status");
 
@@ -101,17 +88,17 @@
         status.textContent = "まだログイン中です。少し待ってください。";
         return;
       }
+      status.textContent = "保存中…少しお待ちください";
 
-      const dataURL = canvas.toDataURL("image/png");
-      const storageRef = ref(storage, `drawings/${participantId}.png`);
-
-      uploadString(storageRef, dataURL, 'data_url')
-        .then(() => status.textContent = "保存しました！")
-        .catch((error) => {
+      const storageRef = ref(storage, `drawings/${participantId}.json`);
+      uploadString(storageRef, JSON.stringify(points), 'raw')
+        .then(() => { status.textContent = "描画座標を保存しました！"; })
+        .catch((error) => { 
           console.error("保存エラー:", error);
           status.textContent = "保存に失敗しました";
         });
     });
+
   </script>
 </body>
 </html>
