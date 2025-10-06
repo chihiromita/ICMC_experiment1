@@ -5,8 +5,8 @@
   <title>実験ページ</title>
   <style>
     .container { max-width: 700px; margin: 20px auto; text-align: center; }
-    canvas { border: 1px solid #000; cursor: crosshair; }
-    video { margin-bottom: 10px; }
+    canvas { border: 1px solid #000; cursor: crosshair; display: block; margin: 0 auto; }
+    video { margin-bottom: 10px; display: block; margin-left: auto; margin-right: auto; }
   </style>
 </head>
 <body>
@@ -20,15 +20,13 @@
     </video>
 
     <!-- 描画用Canvas -->
-    <div>
-      <canvas id="drawCanvas" width="640" height="360"></canvas>
-    </div>
+    <canvas id="drawCanvas" width="640" height="360"></canvas>
 
     <button id="saveBtn">描画を保存する</button>
     <p id="status"></p>
   </div>
 
-  <!-- Firebase SDKの読み込み -->
+  <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
@@ -44,44 +42,40 @@
       appId: "1:232795895941:web:d1dbd765303a5b67e7d1ec"
     };
 
-    // Firebase 初期化
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const storage = getStorage(app);
 
-    // 匿名ログインして参加者IDを取得
+    // 匿名ログイン
     let participantId = "";
     signInAnonymously(auth)
       .then((userCredential) => {
         participantId = userCredential.user.uid;
         console.log("匿名ログイン成功:", participantId);
       })
-      .catch((error) => {
-        console.error("ログインエラー:", error);
-      });
+      .catch((error) => console.error("ログインエラー:", error));
 
-    // Canvasセットアップ
+    // Canvasと背景画像
     const canvas = document.getElementById("drawCanvas");
     const ctx = canvas.getContext("2d");
 
-    // 背景画像を読み込み
     const img = new Image();
-    img.src = "stage.png"; // HTMLと同じ階層に置く
+    img.src = "stage.png"; // HTMLと同じ階層に配置
     img.onload = () => {
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      initDrawing(); // 画像読み込み後に描画イベントをセット
+      enableDrawing(); // 画像読み込み後に描画機能を有効化
     };
+    img.onerror = () => console.error("背景画像の読み込みに失敗しました");
 
-    function initDrawing() {
+    // 描画機能
+    function enableDrawing() {
       let drawing = false;
 
-      canvas.addEventListener("mousedown", e => {
-        drawing = true;
-        draw(e);
-      });
+      canvas.addEventListener("mousedown", e => { drawing = true; draw(e); });
       canvas.addEventListener("mouseup", () => drawing = false);
       canvas.addEventListener("mousemove", e => { if(drawing) draw(e); });
 
+      // タッチ対応
       canvas.addEventListener("touchstart", e => { e.preventDefault(); drawing = true; draw(e.touches[0]); });
       canvas.addEventListener("touchmove", e => { e.preventDefault(); if(drawing) draw(e.touches[0]); });
       canvas.addEventListener("touchend", e => { e.preventDefault(); drawing = false; });
@@ -98,7 +92,7 @@
       ctx.fill();
     }
 
-    // 保存ボタン
+    // 保存
     const saveBtn = document.getElementById("saveBtn");
     const status = document.getElementById("status");
 
@@ -112,9 +106,7 @@
       const storageRef = ref(storage, `drawings/${participantId}.png`);
 
       uploadString(storageRef, dataURL, 'data_url')
-        .then(() => {
-          status.textContent = "保存しました！";
-        })
+        .then(() => status.textContent = "保存しました！")
         .catch((error) => {
           console.error("保存エラー:", error);
           status.textContent = "保存に失敗しました";
