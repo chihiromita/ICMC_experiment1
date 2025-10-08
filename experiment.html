@@ -1,31 +1,25 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>DMI Experiment</title>
-  <style>
-    #drawCanvas {
-      border: 1px solid #000;
-      margin-top: 10px;
-    }
-    #controls {
-      margin-top: 10px;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>DMI Experiment</title>
+<style>
+  #drawCanvas {
+    border: 1px solid black;
+    display: block;
+    margin-bottom: 10px;
+  }
+</style>
 </head>
 <body>
-  <h2>DMI Experiment</h2>
+  <h2>動画を視聴して、舞台上に描画してください</h2>
 
-  <div id="experimentPage">
-    <video id="videoPlayer" width="640" height="360" controls></video>
-    <canvas id="drawCanvas" width="640" height="360"></canvas>
+  <video id="videoPlayer" width="640" height="360" controls></video><br>
+  <canvas id="drawCanvas" width="640" height="360"></canvas><br>
 
-    <div id="controls">
-      <button id="saveBtn">描画を保存</button>
-      <span id="status"></span>
-      <button id="nextBtn" disabled>次のページへ</button>
-    </div>
-  </div>
+  <button id="saveBtn">描画を保存</button>
+  <button id="nextBtn">次の動画へ</button>
+  <p id="status"></p>
 
   <script src="script.js"></script>
 </body>

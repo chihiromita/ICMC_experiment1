@@ -7,8 +7,6 @@ const videoPlayer = document.getElementById("videoPlayer");
 
 // 動画リスト（ファイル名）
 const videos = ["A_1_1.mp4", "A_1_2.mp4", "A_2_1.mp4", "A_2_2.mp4"];
-
-// 動画の順番をランダム化
 let randomizedVideos = [...videos].sort(() => Math.random() - 0.5);
 let currentIndex = 0;
 
@@ -48,28 +46,50 @@ function draw(e) {
   points.push({ x, y });
 }
 
-// --- 動画読み込みとキャンバス初期化 ---
+// --- 動画読み込み ---
 function loadVideo(index) {
   const videoSrc = randomizedVideos[index];
   videoPlayer.src = videoSrc;
   videoPlayer.load();
 
-  // キャンバス初期化
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
   points = [];
   status.textContent = "";
 
-  // 描画初期化
   initDrawing();
 }
 
-// --- 保存関数 ---
-async function saveDrawing(videoName) {
-  if (points.length === 0) return; // 描画がなければ送信しない
+// --- 保存関数（失敗しても無視）---
+async function autoSave(videoName) {
+  if (points.length === 0) return;
 
   const participantId = crypto.randomUUID();
   const filename = `${participantId}_${videoName}.json`;
+
+  try {
+    await fetch("/.netlify/functions/upload", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filename, points })
+    });
+    console.log(`自動保存完了: ${filename}`);
+    points = [];
+  } catch (e) {
+    console.error("自動保存失敗:", e);
+  }
+}
+
+// --- 保存ボタン ---
+saveBtn.addEventListener("click", async () => {
+  if (points.length === 0) {
+    status.textContent = "描画がありません。";
+    return;
+  }
+
+  status.textContent = "保存中…";
+  const participantId = crypto.randomUUID();
+  const filename = `${participantId}_${randomizedVideos[currentIndex]}.json`;
 
   try {
     const res = await fetch("/.netlify/functions/upload", {
@@ -79,27 +99,23 @@ async function saveDrawing(videoName) {
     });
 
     if (res.ok) {
-      console.log(`自動保存完了: ${filename}`);
+      status.textContent = "保存完了！";
       points = [];
     } else {
       const errorText = await res.text();
-      console.error("自動保存エラー:", errorText);
+      status.textContent = "保存に失敗しました: " + errorText;
+      console.error("保存エラー:", errorText);
     }
   } catch (e) {
     console.error("通信エラー:", e);
+    status.textContent = "保存中にエラーが発生しました";
   }
-}
-
-// --- 保存ボタン処理 ---
-saveBtn.addEventListener("click", async () => {
-  await saveDrawing(randomizedVideos[currentIndex]);
-  status.textContent = "保存完了！";
 });
 
-// --- 次ページボタン処理 ---
+// --- 次ページボタン ---
 nextBtn.addEventListener("click", async () => {
-  // ページ移動前に自動保存
-  await saveDrawing(randomizedVideos[currentIndex]);
+  const currentVideoName = randomizedVideos[currentIndex];
+  await autoSave(currentVideoName); // 保存失敗でも無視
 
   currentIndex++;
   if (currentIndex >= randomizedVideos.length) {
