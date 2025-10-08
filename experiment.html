@@ -1,29 +1,69 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>実験ページ</title>
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <title>DMI Experiment</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 20px;
+        }
+        video {
+            width: 70%;
+            max-width: 800px;
+            margin: 20px 0;
+        }
+        button {
+            font-size: 16px;
+            padding: 10px 20px;
+        }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <h2>映像を見て、楽器の位置をマークしてください</h2>
 
-    <!-- 動画 -->
-    <video id="stimulus" width="640" controls>
-      <source src="output_with_sound_A_1_1.mp4" type="video/mp4">
-      ブラウザがvideoタグをサポートしていません。
-    </video>
+<h1>DMI Experiment</h1>
+<p>Please watch the following video carefully and respond to the questions below.</p>
 
-    <!-- 描画用Canvas -->
-    <div>
-      <canvas id="drawCanvas" width="640" height="360"></canvas>
-    </div>
+<video id="stimulus" controls></video>
 
-    <button id="saveBtn">描画を保存する</button>
-    <p id="status"></p>
-  </div>
+<div id="questions" style="display:none;">
+    <p>Did you perceive instruments in the video?</p>
+    <button onclick="submitAnswer('Yes')">Yes</button>
+    <button onclick="submitAnswer('No')">No</button>
+</div>
 
-  <script type="module" src="script.js"></script>
+<script>
+    // --- 1. ランダム条件選択 ---
+    const conditions = ["A_1_1", "A_1_2", "A_2_1", "A_2_2"];
+    const randomIndex = Math.floor(Math.random() * conditions.length);
+    const selected = conditions[randomIndex];
+
+    // --- 2. 動画の設定 ---
+    const videoElement = document.getElementById("stimulus");
+    videoElement.src = `output_with_sound_${selected}.mp4`;
+    videoElement.play();
+
+    // --- 3. 動画終了後に質問表示 ---
+    videoElement.onended = () => {
+        document.getElementById("questions").style.display = "block";
+    }
+
+    // --- 4. 回答送信処理 ---
+    function submitAnswer(answer) {
+        const response = {
+            condition: selected,
+            answer: answer,
+            timestamp: new Date().toISOString()
+        };
+        console.log("Participant response:", response);
+
+        // ここでサーバーに送信したり、CSV/JSONで保存する処理を追加可能
+        alert("Thank you for your response!");
+
+        // 次の動画やページに進む場合はここに処理を追加
+    }
+</script>
+
 </body>
 </html>
