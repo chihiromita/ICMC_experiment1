@@ -1,41 +1,40 @@
 const canvas = document.getElementById("drawCanvas");
 const ctx = canvas.getContext("2d");
 const status = document.getElementById("status");
+const saveBtn = document.getElementById("saveBtn");
+const nextBtn = document.getElementById("nextBtn");
 const videoPlayer = document.getElementById("videoPlayer");
 
-// 描画座標を保存する配列
-let points = [];
+// 動画リスト（ファイル名）
+const videos = ["A_1_1.mp4", "A_1_2.mp4", "A_2_1.mp4", "A_2_2.mp4"];
 
-// --- 動画リスト ---
-const videoList = ["output_with_sound_A_1_1.mp4", "output_with_sound_A_1_2.mp4", "output_with_sound_A_2_1.mp4", "output_with_sound_A_2_2.mp4"];
-
-// --- シャッフル関数 ---
-function shuffle(array) {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
-  }
-  return array;
-}
-
-const randomizedVideos = shuffle([...videoList]);
+// 動画の順番をランダム化
+let randomizedVideos = [...videos].sort(() => Math.random() - 0.5);
 let currentIndex = 0;
 
-// --- 背景画像読み込み ---
+// 描画座標配列
+let points = [];
+
+// 背景画像読み込み
 const img = new Image();
 img.src = "stage.png";
 img.onload = () => {
-  loadNextVideo(); // 最初の動画を読み込む
-  initDrawing();
+  loadVideo(currentIndex);
 };
 
 // --- 描画処理 ---
 function initDrawing() {
   let drawing = false;
 
-  canvas.addEventListener("mousedown", e => { drawing = true; draw(e); });
+  canvas.addEventListener("mousedown", e => {
+    drawing = true;
+    draw(e);
+  });
   canvas.addEventListener("mouseup", () => drawing = false);
-  canvas.addEventListener("mousemove", e => { if (drawing) draw(e); });
+  canvas.addEventListener("mousemove", e => {
+    if (!drawing) return;
+    draw(e);
+  });
 }
 
 function draw(e) {
@@ -46,47 +45,41 @@ function draw(e) {
   ctx.beginPath();
   ctx.arc(x, y, 5, 0, Math.PI * 2);
   ctx.fill();
-
   points.push({ x, y });
 }
 
-// --- 次の動画読み込み ---
-function loadNextVideo() {
-  if (currentIndex >= randomizedVideos.length) {
-    status.textContent = "全ての動画が終了しました。";
-    canvas.style.pointerEvents = "none";
-    videoPlayer.style.display = "none";
-    return;
-  }
-
-  const videoSrc = "videos/" + randomizedVideos[currentIndex];
+// --- 動画読み込みとキャンバス初期化 ---
+function loadVideo(index) {
+  const videoSrc = randomizedVideos[index];
   videoPlayer.src = videoSrc;
   videoPlayer.load();
 
-  // canvasリセット
-  points = [];
+  // キャンバス初期化
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  points = [];
+  status.textContent = "";
 
-  status.textContent = `動画 ${currentIndex + 1} / ${randomizedVideos.length}`;
+  // 「次のページ」ボタンは無効化
+  nextBtn.disabled = true;
 
-  currentIndex++;
+  // 描画初期化
+  initDrawing();
 }
 
-// --- 保存ボタン ---
-document.getElementById("saveBtn").addEventListener("click", async () => {
+// --- 保存ボタン処理 ---
+saveBtn.addEventListener("click", async () => {
   if (points.length === 0) {
     status.textContent = "描画がありません。";
     return;
   }
 
   status.textContent = "保存中…";
-
   const participantId = crypto.randomUUID();
-  const videoName = randomizedVideos[currentIndex - 1].replace(".mp4", "");
-  const filename = `${participantId}_${videoName}.json`;
+  const filename = `${participantId}_${randomizedVideos[currentIndex]}.json`;
 
   try {
+    // 🔸 Netlify Functions にPOST送信
     const res = await fetch("/.netlify/functions/upload", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -94,8 +87,10 @@ document.getElementById("saveBtn").addEventListener("click", async () => {
     });
 
     if (res.ok) {
-      status.textContent = "保存完了！次の動画へ…";
-      loadNextVideo();
+      status.textContent = "保存完了！";
+      points = [];
+      // 保存完了で次ページボタン有効化
+      nextBtn.disabled = false;
     } else {
       const errorText = await res.text();
       status.textContent = "保存に失敗しました: " + errorText;
@@ -105,4 +100,14 @@ document.getElementById("saveBtn").addEventListener("click", async () => {
     console.error("通信エラー:", e);
     status.textContent = "保存中にエラーが発生しました";
   }
+});
+
+// --- 次ページボタン処理 ---
+nextBtn.addEventListener("click", () => {
+  currentIndex++;
+  if (currentIndex >= randomizedVideos.length) {
+    alert("すべての動画を視聴しました。ご協力ありがとうございました！");
+    return;
+  }
+  loadVideo(currentIndex);
 });
