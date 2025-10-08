@@ -4,116 +4,151 @@
 <meta charset="UTF-8">
 <title>DMI Experiment</title>
 <style>
-  body { text-align:center; font-family:sans-serif; }
-  #container { position: relative; width: 800px; height: 450px; margin: auto; }
-  #stage-img { position: absolute; top:0; left:0; width:100%; height:100%; }
-  #stage-canvas { position: absolute; top:0; left:0; width:100%; height:100%; }
-  #next-btn { margin-top: 20px; padding: 10px 20px; font-size: 16px; }
+  body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+  }
+  #container {
+    position: relative;
+    display: inline-block;
+  }
+  #stageCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+  #stageImage {
+    display: block;
+  }
+  video {
+    max-width: 800px;
+  }
+  #nextBtn {
+    margin-top: 20px;
+    padding: 10px 20px;
+    font-size: 16px;
+  }
 </style>
 </head>
 <body>
-
-<h2>Stage Drawing Experiment</h2>
+<h1>DMI Experiment</h1>
 
 <div id="container">
-    <img id="stage-img" src="stage.png">
-    <canvas id="stage-canvas" width="800" height="450"></canvas>
-    <video id="video-player" width="800" height="450" style="position:absolute; top:0; left:0;" controls></video>
+  <video id="videoPlayer" controls></video>
+  <img id="stageImage" src="stage.png" alt="Stage" style="display:none;">
+  <canvas id="stageCanvas"></canvas>
 </div>
 
-<button id="next-btn">Next Video</button>
+<br>
+<button id="nextBtn">Next</button>
 
 <script>
+// --- 設定 ---
+const playerID = prompt("Enter your player ID:");
 const videos = [
-    "A_1_1.mp4", // Strong mapping, narrow
-    "A_1_2.mp4", // Weak mapping, narrow
-    "A_2_1.mp4", // Strong mapping, wide
-    "A_2_2.mp4"  // Weak mapping, wide
+  "A_1_1.mp4",
+  "A_1_2.mp4",
+  "A_2_1.mp4",
+  "A_2_2.mp4"
 ];
 
-let currentVideoIndex = 0;
-let marksAll = []; // 各動画の描画座標をまとめる
-let marks = [];    // 現在動画の描画座標
+// ランダム順序で並び替え
+const videoOrder = [...videos].sort(() => Math.random() - 0.5);
+let currentIndex = 0;
 
-const canvas = document.getElementById('stage-canvas');
+// --- 描画関連 ---
+const canvas = document.getElementById('stageCanvas');
 const ctx = canvas.getContext('2d');
-const video = document.getElementById('video-player');
-const nextBtn = document.getElementById('next-btn');
+const stageImg = document.getElementById('stageImage');
 
-function loadVideo(index){
-    marks = []; // 新しい動画で描画座標をリセット
-    video.src = videos[index];
-    video.load();
-}
-
-// --- ペン描画 ---
 let drawing = false;
-let lastX = 0, lastY = 0;
+let strokes = []; // 描画データ
+let currentStroke = [];
 
-function getMousePos(e){
-    const rect = canvas.getBoundingClientRect();
-    if (e.touches) {
-        return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
-    } else {
-        return { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    }
-}
-
-function startDraw(e){
-    drawing = true;
-    const pos = getMousePos(e);
-    lastX = pos.x;
-    lastY = pos.y;
-    e.preventDefault();
-}
-
-function draw(e){
-    if (!drawing) return;
-    const pos = getMousePos(e);
-    ctx.strokeStyle = 'red';
-    ctx.lineWidth = 4;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(lastX, lastY);
-    ctx.lineTo(pos.x, pos.y);
-    ctx.stroke();
-    marks.push({x: pos.x, y: pos.y});
-    lastX = pos.x;
-    lastY = pos.y;
-    e.preventDefault();
-}
-
-function endDraw(e){
+// マウスイベント
+canvas.addEventListener('mousedown', e => {
+  drawing = true;
+  currentStroke = [{x: e.offsetX, y: e.offsetY}];
+});
+canvas.addEventListener('mousemove', e => {
+  if (!drawing) return;
+  const point = {x: e.offsetX, y: e.offsetY};
+  currentStroke.push(point);
+  drawLine(currentStroke);
+});
+canvas.addEventListener('mouseup', e => {
+  if (!drawing) return;
+  strokes.push({video: videoOrder[currentIndex], points: currentStroke});
+  currentStroke = [];
+  drawing = false;
+});
+canvas.addEventListener('mouseout', e => {
+  if (drawing) {
+    strokes.push({video: videoOrder[currentIndex], points: currentStroke});
+    currentStroke = [];
     drawing = false;
-    e.preventDefault();
-}
-
-canvas.addEventListener('mousedown', startDraw);
-canvas.addEventListener('mousemove', draw);
-canvas.addEventListener('mouseup', endDraw);
-canvas.addEventListener('mouseout', endDraw);
-canvas.addEventListener('touchstart', startDraw);
-canvas.addEventListener('touchmove', draw);
-canvas.addEventListener('touchend', endDraw);
-
-// --- 次ページボタン ---
-nextBtn.addEventListener('click', ()=>{
-    marksAll.push(marks); // 現在動画の座標を保存
-    currentVideoIndex++;
-    if(currentVideoIndex >= videos.length){
-        alert("All videos completed! Check console for marks.");
-        console.log("All marks:", marksAll);
-        nextBtn.disabled = true;
-        video.style.display = "none";
-        return;
-    }
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    loadVideo(currentVideoIndex);
+  }
 });
 
-loadVideo(currentVideoIndex);
+function drawLine(points) {
+  if (points.length < 2) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(stageImg, 0, 0, canvas.width, canvas.height);
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = 'red';
+  ctx.beginPath();
+  ctx.moveTo(points[0].x, points[0].y);
+  for (let i = 1; i < points.length; i++) {
+    ctx.lineTo(points[i].x, points[i].y);
+  }
+  ctx.stroke();
+}
 
+// --- ページ初期化 ---
+const videoPlayer = document.getElementById('videoPlayer');
+const nextBtn = document.getElementById('nextBtn');
+
+stageImg.onload = () => {
+  canvas.width = stageImg.width;
+  canvas.height = stageImg.height;
+  loadVideo(currentIndex);
+};
+
+function loadVideo(index) {
+  videoPlayer.src = videoOrder[index];
+  videoPlayer.load();
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(stageImg, 0, 0, canvas.width, canvas.height);
+}
+
+// --- 次ページ ---
+nextBtn.addEventListener('click', () => {
+  saveCurrentDrawing();
+  currentIndex++;
+  if (currentIndex >= videoOrder.length) {
+    alert("Experiment finished! Thank you.");
+    downloadAllData();
+  } else {
+    loadVideo(currentIndex);
+  }
+});
+
+// --- 保存 ---
+function saveCurrentDrawing() {
+  // 描画はすでに strokes に保存されている
+  console.log("Saved strokes for", videoOrder[currentIndex]);
+}
+
+function downloadAllData() {
+  const data = JSON.stringify({playerID: playerID, strokes: strokes}, null, 2);
+  const blob = new Blob([data], {type: "application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `drawing_data_${playerID}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 </script>
-
 </body>
 </html>
