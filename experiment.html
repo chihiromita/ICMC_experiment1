@@ -1,68 +1,108 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>DMI Experiment</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            margin: 20px;
-        }
-        video {
-            width: 70%;
-            max-width: 800px;
-            margin: 20px 0;
-        }
-        button {
-            font-size: 16px;
-            padding: 10px 20px;
-        }
-    </style>
+<meta charset="UTF-8">
+<title>DMI Experiment</title>
+<style>
+  body { font-family: sans-serif; text-align: center; margin: 20px; }
+  video { width: 800px; height: 450px; background: black; }
+  canvas { border: 1px solid black; display: block; margin: 20px auto; }
+  button { margin-top: 20px; padding: 10px 20px; font-size: 16px; }
+</style>
 </head>
 <body>
 
 <h1>DMI Experiment</h1>
-<p>Please watch the following video carefully and respond to the questions below.</p>
+<p id="instruction">動画を見てください。その後、ステージ上で楽器の位置をクリックしてください。</p>
 
-<video id="stimulus" controls></video>
-
-<div id="questions" style="display:none;">
-    <p>Did you perceive instruments in the video?</p>
-    <button onclick="submitAnswer('Yes')">Yes</button>
-    <button onclick="submitAnswer('No')">No</button>
-</div>
+<video id="video" controls></video>
+<canvas id="stage" width="800" height="400"></canvas>
+<button id="nextBtn" disabled>次の動画へ</button>
 
 <script>
-    // --- 1. ランダム条件選択 ---
-    const conditions = ["A_1_1", "A_1_2", "A_2_1", "A_2_2"];
-    const randomIndex = Math.floor(Math.random() * conditions.length);
-    const selected = conditions[randomIndex];
+const videos = [
+  "videos/A_1_1.mp4",
+  "videos/A_1_2.mp4",
+  "videos/A_2_1.mp4",
+  "videos/A_2_2.mp4"
+];
 
-    // --- 2. 動画の設定 ---
-    const videoElement = document.getElementById("stimulus");
-    videoElement.src = `output_with_sound_${selected}.mp4`;
-    videoElement.play();
+// ランダム順にシャッフル
+function shuffle(array) {
+    return array.sort(() => Math.random() - 0.5);
+}
+const videoSequence = shuffle(videos);
 
-    // --- 3. 動画終了後に質問表示 ---
-    videoElement.onended = () => {
-        document.getElementById("questions").style.display = "block";
+let currentIndex = 0;
+const videoEl = document.getElementById('video');
+const canvas = document.getElementById('stage');
+const ctx = canvas.getContext('2d');
+const nextBtn = document.getElementById('nextBtn');
+
+let marks = [];  // クリック位置保存
+let allData = []; // 全動画分のデータ保存
+
+// 動画再生
+function loadVideo(index) {
+    videoEl.src = videoSequence[index];
+    videoEl.load();
+    nextBtn.disabled = true;
+    marks = [];
+    clearCanvas();
+}
+
+function clearCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // 背景ステージ画像を描く場合はここに描画
+    // 例: ctx.drawImage(stageImg, 0, 0, canvas.width, canvas.height);
+}
+
+// クリックでマーク
+canvas.addEventListener('click', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    marks.push({x, y});
+
+    // 赤い丸を描画
+    ctx.fillStyle = 'red';
+    ctx.beginPath();
+    ctx.arc(x, y, 8, 0, 2 * Math.PI);
+    ctx.fill();
+});
+
+// 動画終了でステージ表示
+videoEl.addEventListener('ended', () => {
+    document.getElementById('instruction').textContent =
+      "動画が終了しました。ステージ上で楽器の位置をクリックしてください。クリックが完了したら「次の動画へ」を押してください。";
+    nextBtn.disabled = false;
+});
+
+// 次の動画へ
+nextBtn.addEventListener('click', () => {
+    // 今回の動画データを保存
+    allData.push({
+        video: videoSequence[currentIndex],
+        marks: marks
+    });
+
+    currentIndex++;
+    if (currentIndex < videoSequence.length) {
+        document.getElementById('instruction').textContent =
+          "次の動画を再生します。動画を見てください。";
+        loadVideo(currentIndex);
+    } else {
+        document.getElementById('instruction').textContent =
+          "すべての動画が終了しました。コンソールに結果を表示します。";
+        console.log("=== 実験データ ===", allData);
+        videoEl.style.display = 'none';
+        canvas.style.display = 'none';
+        nextBtn.style.display = 'none';
     }
+});
 
-    // --- 4. 回答送信処理 ---
-    function submitAnswer(answer) {
-        const response = {
-            condition: selected,
-            answer: answer,
-            timestamp: new Date().toISOString()
-        };
-        console.log("Participant response:", response);
-
-        // ここでサーバーに送信したり、CSV/JSONで保存する処理を追加可能
-        alert("Thank you for your response!");
-
-        // 次の動画やページに進む場合はここに処理を追加
-    }
+// 初回ロード
+loadVideo(currentIndex);
 </script>
 
 </body>
