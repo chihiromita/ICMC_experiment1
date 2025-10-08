@@ -1,30 +1,41 @@
 const canvas = document.getElementById("drawCanvas");
 const ctx = canvas.getContext("2d");
 const status = document.getElementById("status");
+const videoPlayer = document.getElementById("videoPlayer");
 
 // 描画座標を保存する配列
 let points = [];
 
-// 背景画像読み込み
+// --- 動画リスト ---
+const videoList = ["output_with_sound_A_1_1.mp4", "output_with_sound_A_1_2.mp4", "output_with_sound_A_2_1.mp4", "output_with_sound_A_2_2.mp4"];
+
+// --- シャッフル関数 ---
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
+const randomizedVideos = shuffle([...videoList]);
+let currentIndex = 0;
+
+// --- 背景画像読み込み ---
 const img = new Image();
 img.src = "stage.png";
 img.onload = () => {
-  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  loadNextVideo(); // 最初の動画を読み込む
   initDrawing();
 };
 
+// --- 描画処理 ---
 function initDrawing() {
   let drawing = false;
 
-  canvas.addEventListener("mousedown", e => {
-    drawing = true;
-    draw(e);
-  });
+  canvas.addEventListener("mousedown", e => { drawing = true; draw(e); });
   canvas.addEventListener("mouseup", () => drawing = false);
-  canvas.addEventListener("mousemove", e => {
-    if (!drawing) return;
-    draw(e);
-  });
+  canvas.addEventListener("mousemove", e => { if (drawing) draw(e); });
 }
 
 function draw(e) {
@@ -36,11 +47,33 @@ function draw(e) {
   ctx.arc(x, y, 5, 0, Math.PI * 2);
   ctx.fill();
 
-  // 描画した座標を保存
   points.push({ x, y });
 }
 
-// 保存ボタンの処理
+// --- 次の動画読み込み ---
+function loadNextVideo() {
+  if (currentIndex >= randomizedVideos.length) {
+    status.textContent = "全ての動画が終了しました。";
+    canvas.style.pointerEvents = "none";
+    videoPlayer.style.display = "none";
+    return;
+  }
+
+  const videoSrc = "videos/" + randomizedVideos[currentIndex];
+  videoPlayer.src = videoSrc;
+  videoPlayer.load();
+
+  // canvasリセット
+  points = [];
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+  status.textContent = `動画 ${currentIndex + 1} / ${randomizedVideos.length}`;
+
+  currentIndex++;
+}
+
+// --- 保存ボタン ---
 document.getElementById("saveBtn").addEventListener("click", async () => {
   if (points.length === 0) {
     status.textContent = "描画がありません。";
@@ -49,24 +82,20 @@ document.getElementById("saveBtn").addEventListener("click", async () => {
 
   status.textContent = "保存中…";
 
-  // 参加者ID（ランダム）＋タイムスタンプ
   const participantId = crypto.randomUUID();
-  const filename = `${participantId}_video1.json`;
+  const videoName = randomizedVideos[currentIndex - 1].replace(".mp4", "");
+  const filename = `${participantId}_${videoName}.json`;
 
   try {
-    // 🔸 Netlify Functions にPOST送信
     const res = await fetch("/.netlify/functions/upload", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        filename,
-        points // JSON形式のまま送る
-      })
+      body: JSON.stringify({ filename, points })
     });
 
     if (res.ok) {
-      status.textContent = "保存完了！";
-      points = []; // 保存後リセット
+      status.textContent = "保存完了！次の動画へ…";
+      loadNextVideo();
     } else {
       const errorText = await res.text();
       status.textContent = "保存に失敗しました: " + errorText;

@@ -2,28 +2,22 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>実験ページ</title>
-  <link rel="stylesheet" href="style.css">
+  <title>DMI Experiment</title>
+  <style>
+    body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; margin: 20px; }
+    canvas { border: 1px solid #000; margin-top: 10px; }
+    video { margin-top: 10px; }
+    #status { margin-top: 10px; }
+    #saveBtn { margin-top: 10px; padding: 8px 16px; font-size: 16px; }
+  </style>
 </head>
 <body>
-  <div class="container">
-    <h2>映像を見て、楽器の位置をマークしてください</h2>
+  <h1>DMI Experiment</h1>
+  <video id="videoPlayer" width="640" height="360" controls></video>
+  <canvas id="drawCanvas" width="640" height="360"></canvas>
+  <div id="status">動画を読み込み中…</div>
+  <button id="saveBtn">保存して次へ</button>
 
-    <!-- 動画 -->
-    <video id="stimulus" width="640" controls>
-      <source src="output_with_sound_A_1_1.mp4" type="video/mp4">
-      ブラウザがvideoタグをサポートしていません。
-    </video>
-
-    <!-- 描画用Canvas -->
-    <div>
-      <canvas id="drawCanvas" width="640" height="360"></canvas>
-    </div>
-
-    <button id="saveBtn">描画を保存する</button>
-    <p id="status"></p>
-  </div>
-
-  <script type="module" src="script.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
