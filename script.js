@@ -60,26 +60,18 @@ function loadVideo(index) {
   points = [];
   status.textContent = "";
 
-  // 「次のページ」ボタンは無効化
-  nextBtn.disabled = true;
-
   // 描画初期化
   initDrawing();
 }
 
-// --- 保存ボタン処理 ---
-saveBtn.addEventListener("click", async () => {
-  if (points.length === 0) {
-    status.textContent = "描画がありません。";
-    return;
-  }
+// --- 保存関数 ---
+async function saveDrawing(videoName) {
+  if (points.length === 0) return; // 描画がなければ送信しない
 
-  status.textContent = "保存中…";
   const participantId = crypto.randomUUID();
-  const filename = `${participantId}_${randomizedVideos[currentIndex]}.json`;
+  const filename = `${participantId}_${videoName}.json`;
 
   try {
-    // 🔸 Netlify Functions にPOST送信
     const res = await fetch("/.netlify/functions/upload", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -87,23 +79,28 @@ saveBtn.addEventListener("click", async () => {
     });
 
     if (res.ok) {
-      status.textContent = "保存完了！";
+      console.log(`自動保存完了: ${filename}`);
       points = [];
-      // 保存完了で次ページボタン有効化
-      nextBtn.disabled = false;
     } else {
       const errorText = await res.text();
-      status.textContent = "保存に失敗しました: " + errorText;
-      console.error("保存エラー:", errorText);
+      console.error("自動保存エラー:", errorText);
     }
   } catch (e) {
     console.error("通信エラー:", e);
-    status.textContent = "保存中にエラーが発生しました";
   }
+}
+
+// --- 保存ボタン処理 ---
+saveBtn.addEventListener("click", async () => {
+  await saveDrawing(randomizedVideos[currentIndex]);
+  status.textContent = "保存完了！";
 });
 
 // --- 次ページボタン処理 ---
-nextBtn.addEventListener("click", () => {
+nextBtn.addEventListener("click", async () => {
+  // ページ移動前に自動保存
+  await saveDrawing(randomizedVideos[currentIndex]);
+
   currentIndex++;
   if (currentIndex >= randomizedVideos.length) {
     alert("すべての動画を視聴しました。ご協力ありがとうございました！");
